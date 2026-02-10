@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os
 import tempfile
-from pathlib import Path  # <--- THIS WAS MISSING
+from pathlib import Path
 from .utils import save_upload_file, extract_shapefile
 from .analysis import run_network_analysis
 
@@ -18,6 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- FIX: Added this Root Endpoint back ---
 @app.get("/")
 def read_root():
     return {"message": "GEO NET API is running! Use /analyze endpoint."}
@@ -27,13 +28,15 @@ async def analyze_network(
     file: UploadFile = File(...),
     analysis_type: str = Form(...),
     classification_method: str = Form("Natural Breaks (Jenks)"),
-    class_count: int = Form(5)
+    class_count: int = Form(5),
+    metric: str = Form("EUCLIDEAN"),
+    radius: str = Form("n")
 ):
     temp_dir = tempfile.mkdtemp()
     try:
         # 1. Handle File Upload
         zip_path = os.path.join(temp_dir, file.filename)
-        save_upload_file(file, Path(zip_path))  # Now Path works
+        save_upload_file(file, Path(zip_path))
         
         # 2. Extract Shapefile
         shp_path = extract_shapefile(zip_path, temp_dir)
@@ -43,7 +46,9 @@ async def analyze_network(
             shp_path, 
             analysis_type, 
             classification_method, 
-            class_count
+            class_count,
+            metric,
+            radius
         )
         
         return result_geojson
