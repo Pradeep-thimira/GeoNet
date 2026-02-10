@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+geopandas
+networkx
+momepy
+mapclassify
+shapely
+scipy

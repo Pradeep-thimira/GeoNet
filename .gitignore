@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+env/
+
+# App Specific
+uploads/
+*.zip
+*.shp
+*.shx
+*.dbf
+
+# OS Specific
+.DS_Store
+Thumbs.db
