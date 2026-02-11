@@ -1,8 +1,11 @@
 // --- Global Variables ---
 let map;
 let currentBaseLayer = null;
-let analysisLayer = null; // Store the result layer
+let analysisLayer = null; 
+let currentGeoJSON = null; // Store current analysis data
+let currentMaxClassId = 0; // Store the max class ID for color scaling
 
+// Configuration: Change this if deploying to a remote server
 const API_URL = "http://localhost:8000/analyze";
 
 const ramps = {
@@ -32,7 +35,7 @@ const tileLayers = {
 
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
-    updateRamp(); 
+    updateRampPreview(); 
     handleAnalysisTypeChange(); 
 });
 
@@ -63,7 +66,11 @@ function initMap() {
 async function runAnalysis() {
     const fileInput = document.querySelector('input[type="file"]');
     const analysisType = document.getElementById('analysis-type').value;
-    const classCount = document.querySelector('input[type="number"]').value;
+    
+    // CRITICAL FIX: Get value by ID, parse as Int. 
+    // Defaults to 5 if empty/invalid to prevent backend errors.
+    let classCount = parseInt(document.getElementById('class-count').value);
+    if (isNaN(classCount) || classCount < 1) classCount = 5;
     
     // Params
     const metric = document.getElementById('param-metric').value;
@@ -84,7 +91,7 @@ async function runAnalysis() {
         return;
     }
 
-    showToast("Running Analysis...", false);
+    showToast(`Running Analysis (${classCount} classes)...`, false);
 
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
@@ -93,7 +100,7 @@ async function runAnalysis() {
     formData.append('class_count', classCount);
     // Append new params
     formData.append('metric', metric);
-    formData.append('radius', radius);
+    formData.append('radius', radius || 'n');
 
     try {
         const response = await fetch(API_URL, {
@@ -107,8 +114,32 @@ async function runAnalysis() {
         }
 
         const geoData = await response.json();
-        renderGeoJSON(geoData, classCount);
-        hideToast();
+        
+        // Save state
+        currentGeoJSON = geoData;
+        
+        // Calculate max class ID present in data for accurate coloring
+        currentMaxClassId = 0;
+        if(geoData.features) {
+            geoData.features.forEach(f => {
+                const cid = f.properties.class_id || 0;
+                if(cid > currentMaxClassId) currentMaxClassId = cid;
+            });
+        }
+        
+        // Debug log
+        console.log(`Analysis complete. Max Class ID: ${currentMaxClassId}, Requested: ${classCount}`);
+
+        renderGeoJSON();
+
+        // Check if the actual number of classes matches the requested amount
+        const actualClasses = currentMaxClassId + 1;
+        if (actualClasses < classCount) {
+            showToast(`Warning: Data only supports ${actualClasses} classes (requested ${classCount}).`, true);
+            setTimeout(hideToast, 5000);
+        } else {
+            hideToast();
+        }
 
     } catch (error) {
         console.error(error);
@@ -137,40 +168,61 @@ function handleAnalysisTypeChange() {
     else params.classList.remove('hidden');
 }
 
-function renderGeoJSON(data, classCount) {
+function renderGeoJSON() {
     if (analysisLayer) map.removeLayer(analysisLayer);
+    if (!currentGeoJSON) return;
 
-    const rampName = document.getElementById('ramp-select').value;
-    const isInverted = document.getElementById('invert-ramp').checked;
-    const opacityVal = document.getElementById('opacity-slider').value / 100;
-    const widthVal = document.getElementById('width-slider').value;
-
-    let colors = getInterpolatedColors(rampName, classCount);
-    if (isInverted) colors = colors.reverse();
-
-    analysisLayer = L.geoJSON(data, {
-        style: function(feature) {
-            const classId = feature.properties.class_id || 0;
-            const color = colors[Math.min(classId, colors.length - 1)] || '#333';
-            return {
-                color: color,
-                weight: parseFloat(widthVal),
-                opacity: parseFloat(opacityVal)
-            };
-        },
+    // Create layer (style will be set dynamically)
+    analysisLayer = L.geoJSON(currentGeoJSON, {
         onEachFeature: function(feature, layer) {
             const val = feature.properties.value ? feature.properties.value.toFixed(4) : 'N/A';
             layer.bindPopup(`<strong>Value:</strong> ${val}<br><strong>Class:</strong> ${feature.properties.class_id}`);
         }
     }).addTo(map);
 
+    updateLayerStyle(); // Apply initial style
     map.fitBounds(analysisLayer.getBounds());
+    
+    // UI Updates
     document.getElementById('layer-visible-toggle').checked = true;
-
     const layerContent = document.getElementById('layer-content');
     if (layerContent.style.maxHeight === '0px' || layerContent.style.maxHeight === '') {
         toggleLayerPanel();
     }
+}
+
+/**
+ * Updates the style of the existing layer based on current UI settings.
+ * Does NOT require re-running the analysis.
+ */
+function updateLayerStyle() {
+    if (!analysisLayer) return;
+
+    const rampName = document.getElementById('ramp-select').value;
+    const isInverted = document.getElementById('invert-ramp').checked;
+    const opacityVal = document.getElementById('opacity-slider').value / 100;
+    const widthVal = document.getElementById('width-slider').value;
+
+    // Use currentMaxClassId + 1 as step count so colors span the full range
+    // If the backend returns 10 classes (ids 0-9), currentMaxClassId is 9. steps = 10.
+    let steps = currentMaxClassId + 1;
+    let colors = getInterpolatedColors(rampName, steps);
+    
+    if (isInverted) colors = colors.reverse();
+
+    analysisLayer.setStyle(feature => {
+        const classId = feature.properties.class_id || 0;
+        const color = colors[Math.min(classId, colors.length - 1)] || '#333';
+        return {
+            color: color,
+            weight: parseFloat(widthVal),
+            opacity: parseFloat(opacityVal)
+        };
+    });
+
+    // Update UI labels
+    document.getElementById('opacity-value').innerText = Math.round(opacityVal * 100) + '%';
+    document.getElementById('width-value').innerText = widthVal + 'px';
 }
 
 function toggleLayerVisibility() {
@@ -181,28 +233,55 @@ function toggleLayerVisibility() {
     }
 }
 
-function updateLayerSettings() {
-    const opacity = document.getElementById('opacity-slider').value;
-    const width = document.getElementById('width-slider').value;
-    document.getElementById('opacity-value').innerText = opacity + '%';
-    document.getElementById('width-value').innerText = width + 'px';
+function updateRamp() {
+    updateRampPreview();
+    updateLayerStyle(); // Live update the map
+}
 
+function updateRampPreview() {
+    const select = document.getElementById('ramp-select');
+    const invert = document.getElementById('invert-ramp').checked;
+    const preview = document.getElementById('color-ramp-preview');
+    const outputPreview = document.getElementById('layer-output-ramp-preview');
+    
+    let colors = ramps[select.value];
+    if (invert) colors = [...colors].reverse();
+    
+    const gradient = `linear-gradient(to right, ${colors.join(', ')})`;
+    if(preview) preview.style.backgroundImage = gradient;
+    if(outputPreview) outputPreview.style.backgroundImage = gradient;
+}
+
+function resetMap() {
     if (analysisLayer) {
-        analysisLayer.setStyle({
-            opacity: opacity / 100,
-            weight: parseFloat(width)
-        });
+        map.removeLayer(analysisLayer);
+        analysisLayer = null;
     }
+    currentGeoJSON = null;
+    currentMaxClassId = 0;
+
+    // Hide layer panel
+    const layerContent = document.getElementById('layer-content');
+    if (layerContent.style.maxHeight !== '0px') {
+        toggleLayerPanel();
+    }
+
+    // Reset inputs if desired, or just clear the visualization
+    showToast("Map layers cleared", false);
+    setTimeout(hideToast, 2000);
 }
 
 function getInterpolatedColors(rampKey, steps) {
     const baseColors = ramps[rampKey];
-    if (steps <= baseColors.length) return baseColors.slice(0, steps);
-    let expanded = [];
-    for(let i=0; i<steps; i++) {
-        expanded.push(baseColors[i % baseColors.length]);
+    if (steps < 2) return [baseColors[0]];
+    
+    let result = [];
+    for (let i = 0; i < steps; i++) {
+        const t = i / (Math.max(steps, 2) - 1);
+        const index = Math.round(t * (baseColors.length - 1));
+        result.push(baseColors[index]);
     }
-    return expanded; 
+    return result; 
 }
 
 function showToast(message, isError = false) {
@@ -219,6 +298,8 @@ function showToast(message, isError = false) {
         content.classList.remove('bg-red-600');
         content.classList.add('bg-blue-600');
         icon.className = 'fas fa-sync fa-spin'; 
+        // Remove spin if it's just a notification (like cleared)
+        if (message.includes('cleared')) icon.className = 'fas fa-check';
     }
     msg.innerText = message;
     toast.classList.remove('opacity-0', 'translate-y-[20px]');
@@ -260,18 +341,6 @@ function changeBaseMap(type) {
     currentBaseLayer.addTo(map);
     if (type === 'dark' && !html.classList.contains('dark')) html.classList.add('dark');
     else if (type === 'positron' && html.classList.contains('dark')) html.classList.remove('dark');
-}
-
-function updateRamp() {
-    const select = document.getElementById('ramp-select');
-    const invert = document.getElementById('invert-ramp').checked;
-    const preview = document.getElementById('color-ramp-preview');
-    const outputPreview = document.getElementById('layer-output-ramp-preview');
-    let colors = ramps[select.value];
-    if (invert) colors = [...colors].reverse();
-    const gradient = `linear-gradient(to right, ${colors.join(', ')})`;
-    preview.style.backgroundImage = gradient;
-    if(outputPreview) outputPreview.style.backgroundImage = gradient;
 }
 
 function handleFileUpload(input) {

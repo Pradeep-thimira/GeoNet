@@ -18,7 +18,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- FIX: Added this Root Endpoint back ---
 @app.get("/")
 def read_root():
     return {"message": "GEO NET API is running! Use /analyze endpoint."}
@@ -54,7 +53,6 @@ async def analyze_network(
         return result_geojson
 
     except Exception as e:
-        # Print error to terminal for debugging
         print(f"Error: {e}") 
         raise HTTPException(status_code=500, detail=str(e))
     finally:

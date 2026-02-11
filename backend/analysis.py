@@ -14,35 +14,60 @@ def run_network_analysis(shp_path, analysis_type, classification_method, class_c
         gdf = gdf.to_crs(epsg=3857)
 
     # 2. Graph Conversion
+    # Primal graph: Nodes = Intersections, Edges = Street Segments
     G = momepy.gdf_to_nx(gdf, approach='primal', length='mm_len')
 
     # 3. Configure Weight & Radius
-    # metric: EUCLIDEAN, ANGULAR, HYBRID, EUCLIDEAN_ANGULAR
-    # Note: True Angular requires dual graph or complex edge weights. 
-    # We map 'EUCLIDEAN' to physical length, others to Topological (steps) for this demo.
-    weight_key = 'mm_len' if metric == 'EUCLIDEAN' else None 
-    
+    # 'mm_len' is automatically calculated by momepy during conversion
+    if metric == 'EUCLIDEAN':
+        weight_key = 'mm_len' 
+    else:
+        # For ANGULAR or HYBRID in Primal graph, we default to Topological (steps)
+        # unless we convert to Dual graph. For this fix, we treat non-Euclidean as Topological.
+        weight_key = None 
+
+    # Parse Radius
+    radius_val = None
+    if radius and radius != 'n':
+        try:
+            radius_val = float(radius)
+        except ValueError:
+            radius_val = None
+
     # 4. Calculate Metrics (ON NODES)
+    column_name = analysis_type
+
     if analysis_type == 'connectivity':
         metric_values = dict(G.degree())
-        column_name = 'connectivity'
         
     elif analysis_type == 'closeness':
-        # Radius logic would go here (e.g. subgraph limitation), but NX is global by default.
-        metric_values = nx.closeness_centrality(G, distance=weight_key)
-        column_name = 'closeness'
+        # Use momepy for radius support if provided, otherwise NX global
+        if radius_val:
+            # momepy.closeness_centrality handles radius (local centrality)
+            # Note: momepy returns a Series, need to map to dict
+            nodes_gdf = momepy.nx_to_gdf(G, points=True, lines=False)
+            closeness = momepy.closeness_centrality(
+                G, radius=radius_val, name=column_name, distance=weight_key, weight=weight_key
+            )
+            # Map values back to graph nodes using their coordinates or index
+            # Momepy attaches values to the dataframe index which matches graph nodes
+            metric_values = closeness.to_dict()
+        else:
+            metric_values = nx.closeness_centrality(G, distance=weight_key)
         
     elif analysis_type == 'betweenness':
+        # Betweenness with radius is complex (ego graph), doing global for now
         metric_values = nx.betweenness_centrality(G, weight=weight_key)
-        column_name = 'betweenness'
     
     else:
         raise ValueError("Unknown analysis type")
 
     # Save metrics to nodes
-    nx.set_node_attributes(G, metric_values, column_name)
+    if isinstance(metric_values, dict):
+        nx.set_node_attributes(G, metric_values, column_name)
 
     # 5. Map Node Attributes to Edges
+    # We visualize edges, so we average the start/end node values
     edge_values = {}
     for u, v, key, data in G.edges(keys=True, data=True):
         val_u = G.nodes[u].get(column_name, 0)
@@ -57,14 +82,22 @@ def run_network_analysis(shp_path, analysis_type, classification_method, class_c
     # 7. Classification
     values = gdf_out[column_name]
     
-    if classification_method == 'Natural Breaks (Jenks)':
-        classifier = mapclassify.FisherJenks(values, k=class_count)
-    elif classification_method == 'Equal Interval':
-        classifier = mapclassify.EqualInterval(values, k=class_count)
-    else: # Quantile
-        classifier = mapclassify.Quantiles(values, k=class_count)
-        
-    gdf_out['class_id'] = classifier.yb
+    # Handle case with all same values or empty
+    if values.nunique() <= 1:
+        gdf_out['class_id'] = 0
+    else:
+        try:
+            if classification_method == 'Natural Breaks (Jenks)':
+                classifier = mapclassify.FisherJenks(values, k=min(class_count, values.nunique()))
+            elif classification_method == 'Equal Interval':
+                classifier = mapclassify.EqualInterval(values, k=class_count)
+            else: # Quantile
+                classifier = mapclassify.Quantiles(values, k=class_count)
+            gdf_out['class_id'] = classifier.yb
+        except Exception:
+            # Fallback if classification fails
+            gdf_out['class_id'] = 0
+
     gdf_out['value'] = values
     
     # 8. Prepare Output

@@ -1,18 +1,21 @@
-# Python
-__pycache__/
+Python
+
+pycache/
 *.py[cod]
 *$py.class
 .env
 venv/
 env/
 
-# App Specific
+App Specific
+
 uploads/
 *.zip
 *.shp
 *.shx
 *.dbf
 
-# OS Specific
+OS Specific
+
 .DS_Store
 Thumbs.db
