@@ -1,5 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import shutil
 import os
 import tempfile
@@ -17,10 +19,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.get("/")
-def read_root():
-    return {"message": "GEO NET API is running! Use /analyze endpoint."}
 
 @app.post("/analyze")
 async def analyze_network(
@@ -59,6 +57,23 @@ async def analyze_network(
         # Cleanup temp files
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
+
+# --- SERVE FRONTEND ON RENDER ---
+
+# Get absolute path to public directory
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")
+
+# Mount the static directory to serve script.js, CSS, etc.
+app.mount("/static", StaticFiles(directory=PUBLIC_DIR), name="static")
+
+# Serve index.html on the root path
+@app.get("/")
+async def serve_frontend():
+    index_path = os.path.join(PUBLIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"error": "Frontend not found. Please ensure the 'public' directory exists."}
 
 if __name__ == "__main__":
     import uvicorn

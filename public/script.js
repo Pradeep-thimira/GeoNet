@@ -5,8 +5,8 @@ let analysisLayer = null;
 let currentGeoJSON = null; // Store current analysis data
 let currentMaxClassId = 0; // Store the max class ID for color scaling
 
-// Configuration: Change this if deploying to a remote server
-const API_URL = "http://localhost:8000/analyze";
+// UPDATE: Changed to relative path for seamless local and production usage
+const API_URL = "/analyze";
 
 const ramps = {
     'blue': ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
