@@ -57,9 +57,10 @@
         }
     </style>
 </head>
-<body class="h-screen w-screen overflow-hidden text-slate-800 dark:text-slate-100 transition-colors duration-300 relative bg-slate-50 dark:bg-slate-900">
+<body class="h-screen w-screen overflow-hidden text-slate-800 dark:text-slate-100 transition-colors duration-500 relative bg-slate-50 dark:bg-slate-900">
 
-    <div id="map-container" class="absolute inset-0 z-0 bg-slate-200 dark:bg-slate-900 transition-all duration-300"></div>
+    <!-- Added transition classes for filter/opacity for smooth map changing -->
+    <div id="map-container" class="absolute inset-0 z-0 bg-slate-200 dark:bg-slate-900 transition-all duration-500 ease-in-out"></div>
 
     <div class="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
         <div class="flex items-start">
@@ -74,9 +75,10 @@
                         <p class="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide">Geospatial Network Analysis</p>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button id="theme-toggle" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors">
-                            <i class="fas fa-moon dark:hidden"></i>
-                            <i class="fas fa-sun hidden dark:inline text-yellow-400"></i>
+                        <!-- Upgraded Theme Toggle with Cool Rotation/Scale Animation -->
+                        <button id="theme-toggle" class="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors overflow-hidden">
+                            <i class="fas fa-moon absolute transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform dark:-rotate-90 dark:scale-0 dark:opacity-0 text-slate-600"></i>
+                            <i class="fas fa-sun absolute text-yellow-400 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform rotate-90 scale-0 opacity-0 dark:rotate-0 dark:scale-100 dark:opacity-100"></i>
                         </button>
                         <button onclick="toggleInputPanel()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-red-500 transition-colors" title="Hide Panel">
                             <i class="fas fa-chevron-left"></i>
@@ -257,6 +259,13 @@
                             <div class="h-3 flex-1 rounded-full bg-gradient-to-r from-blue-100 to-blue-800 shadow-inner border border-slate-100 dark:border-slate-600" id="layer-output-ramp-preview"></div>
                              <span class="w-8"></span>
                         </div>
+                        
+                        <div class="pt-2 border-t border-slate-200 dark:border-slate-700 mt-4 flex justify-end">
+                            <button id="btn-download" onclick="downloadShapefile()" disabled class="w-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 font-medium py-1.5 px-3 text-xs rounded flex items-center justify-center space-x-2 transition-all cursor-not-allowed">
+                                <i class="fas fa-download"></i>
+                                <span>Download Shapefile</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -282,7 +291,9 @@
         </div>
     </div>
 
-    <!-- UPDATE: Changed to load script from static directory -->
+    <!-- Theme Reveal Overlay -->
+    <div id="theme-reveal-overlay" class="fixed pointer-events-none z-[9999] rounded-full" style="width: 10px; height: 10px; top: 0; left: 0; transform: translate(-50%, -50%) scale(0);"></div>
+
     <script src="/static/script.js"></script>
 </body>
 </html>

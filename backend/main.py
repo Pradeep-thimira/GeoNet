@@ -1,10 +1,12 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import shutil
 import os
 import tempfile
+import zipfile
+import geopandas as gpd
 from pathlib import Path
 from .utils import save_upload_file, extract_shapefile
 from .analysis import run_network_analysis
@@ -57,6 +59,43 @@ async def analyze_network(
         # Cleanup temp files
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
+
+@app.post("/download")
+async def download_shapefile(request: Request, background_tasks: BackgroundTasks):
+    temp_dir = tempfile.mkdtemp()
+    
+    def cleanup():
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+    background_tasks.add_task(cleanup)
+    
+    try:
+        data = await request.json()
+        
+        # Create GeoDataFrame from the GeoJSON features
+        gdf = gpd.GeoDataFrame.from_features(data["features"])
+        if not gdf.crs:
+            gdf.set_crs(epsg=4326, inplace=True)
+            
+        # Write to ESRI Shapefile format
+        shp_path = os.path.join(temp_dir, "geonet_output.shp")
+        gdf.to_file(shp_path, driver="ESRI Shapefile")
+        
+        # Zip the directory contents
+        zip_path = os.path.join(temp_dir, "geonet_output.zip")
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(temp_dir):
+                for file in files:
+                    if file != "geonet_output.zip":
+                        zipf.write(os.path.join(root, file), arcname=file)
+                        
+        return FileResponse(zip_path, media_type="application/zip", filename="geonet_output.zip")
+
+    except Exception as e:
+        print(f"Download Error: {e}")
+        cleanup()
+        raise HTTPException(status_code=500, detail="Failed to prepare shapefile for download.")
 
 # --- SERVE FRONTEND ON RENDER ---
 
