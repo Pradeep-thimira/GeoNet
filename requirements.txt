@@ -1,9 +1,25 @@
-fastapi
-uvicorn
-python-multipart
-geopandas
-networkx
-momepy
-mapclassify
-shapely
-scipy
+# Core API
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+
+# Geospatial
+geopandas>=0.14.0
+shapely>=2.0.0
+
+# Network analysis
+networkx>=3.3
+momepy>=0.7.0
+
+# Classification
+mapclassify>=2.6.0
+
+# Scientific computing (required by momepy / geopandas internals)
+scipy>=1.13.0
+numpy>=1.26.0
+
+# NOTE: libspatialindex is required by rtree (a geopandas dependency) and must
+# be installed at the OS level — it cannot be installed via pip alone.
+# On Debian/Ubuntu:  apt-get install -y libspatialindex-dev
+# On macOS:          brew install spatialindex
+# On Render/Railway: add a build command or use a Dockerfile with the apt step.

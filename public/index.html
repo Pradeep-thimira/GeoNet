@@ -7,20 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    }
-                }
-            }
+            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
         }
     </script>
     <style>
@@ -29,7 +23,7 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
 
-        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
             background: #3b82f6; margin-top: -5px; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -41,25 +35,20 @@
         .dark input[type=range]::-webkit-slider-runnable-track { background: #475569; }
 
         .leaflet-control-scale-line {
-            background: rgba(255, 255, 255, 0.8); border: 1px solid #cbd5e1; color: #475569;
+            background: rgba(255,255,255,0.8); border: 1px solid #cbd5e1; color: #475569;
             font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600;
             padding: 2px 5px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             margin-bottom: 10px !important; margin-left: 20px !important;
         }
         .dark .leaflet-control-scale-line {
-            background: rgba(15, 23, 42, 0.8); border-color: #334155; color: #cbd5e1;
+            background: rgba(15,23,42,0.8); border-color: #334155; color: #cbd5e1;
         }
-        .leaflet-control-attribution {
-            font-size: 9px; background: rgba(255, 255, 255, 0.7) !important;
-        }
-        .dark .leaflet-control-attribution {
-            background: rgba(15, 23, 42, 0.7) !important; color: #94a3b8;
-        }
+        .leaflet-control-attribution { font-size: 9px; background: rgba(255,255,255,0.7) !important; }
+        .dark .leaflet-control-attribution { background: rgba(15,23,42,0.7) !important; color: #94a3b8; }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden text-slate-800 dark:text-slate-100 transition-colors duration-500 relative bg-slate-50 dark:bg-slate-900">
 
-    <!-- Added transition classes for filter/opacity for smooth map changing -->
     <div id="map-container" class="absolute inset-0 z-0 bg-slate-200 dark:bg-slate-900 transition-all duration-500 ease-in-out"></div>
 
     <div class="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
@@ -71,11 +60,10 @@
             <div id="input-panel" class="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-1 flex flex-col w-80 max-h-[90vh] transition-all duration-300 origin-top-left">
                 <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                     <div>
-                        <h1 class="font-bold text-2xl leading-tight bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent drop-shadow-sm">GEO NET</h1>
+                        <h1 class="font-bold text-2xl leading-tight bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent drop-shadow-sm">Geo Net</h1>
                         <p class="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide">Geospatial Network Analysis</p>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <!-- Upgraded Theme Toggle with Cool Rotation/Scale Animation -->
                         <button id="theme-toggle" class="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors overflow-hidden">
                             <i class="fas fa-moon absolute transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform dark:-rotate-90 dark:scale-0 dark:opacity-0 text-slate-600"></i>
                             <i class="fas fa-sun absolute text-yellow-400 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] transform rotate-90 scale-0 opacity-0 dark:rotate-0 dark:scale-100 dark:opacity-100"></i>
@@ -103,7 +91,7 @@
                     </div>
 
                     <div class="h-px bg-slate-200 dark:bg-slate-700"></div>
-                    
+
                     <div class="space-y-3">
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Analysis Type</label>
                         <div class="relative">
@@ -118,15 +106,13 @@
 
                     <div id="centrality-params" class="hidden space-y-4 pt-2">
                         <div class="flex items-center space-x-2">
-                             <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
-                             <h3 class="font-bold text-[10px] uppercase text-slate-400 tracking-wider">Parameters</h3>
-                             <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                            <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                            <h3 class="font-bold text-[10px] uppercase text-slate-400 tracking-wider">Parameters</h3>
+                            <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
                         </div>
 
                         <div class="space-y-2">
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                Routing and analysis matric
-                            </label>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">Routing and analysis metric</label>
                             <div class="relative">
                                 <select id="param-metric" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none appearance-none">
                                     <option value="EUCLIDEAN">EUCLIDEAN</option>
@@ -139,9 +125,7 @@
                         </div>
 
                         <div class="space-y-2">
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                Radii
-                            </label>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">Radii</label>
                             <div class="flex space-x-2">
                                 <div class="relative flex-1">
                                     <select id="param-radius-select" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none appearance-none" onchange="toggleCustomRadius()">
@@ -161,25 +145,26 @@
 
                     <div class="space-y-4">
                         <h3 class="font-semibold text-sm">Classification Settings</h3>
+                        
                         <div class="space-y-1 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                             <label class="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
-                                <input type="radio" name="classify" class="text-blue-600 focus:ring-blue-500" checked>
+                                <input type="radio" name="classify" value="Natural Breaks (Jenks)" class="text-blue-600 focus:ring-blue-500" checked>
                                 <span class="text-xs">Natural Breaks (Jenks)</span>
                             </label>
                             <label class="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
-                                <input type="radio" name="classify" class="text-blue-600 focus:ring-blue-500">
+                                <input type="radio" name="classify" value="Equal Count (Quantile)" class="text-blue-600 focus:ring-blue-500">
                                 <span class="text-xs">Equal Count (Quantile)</span>
                             </label>
                             <label class="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
-                                <input type="radio" name="classify" class="text-blue-600 focus:ring-blue-500">
+                                <input type="radio" name="classify" value="Equal Interval" class="text-blue-600 focus:ring-blue-500">
                                 <span class="text-xs">Equal Interval</span>
                             </label>
                         </div>
                         <div class="space-y-2">
-                             <div class="flex justify-between items-center">
+                            <div class="flex justify-between items-center">
                                 <label class="text-xs text-slate-500">Class Count</label>
                                 <span class="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300">1-20</span>
-                             </div>
+                            </div>
                             <input type="number" id="class-count" min="1" max="20" value="5" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         </div>
                         <div class="space-y-2">
@@ -257,9 +242,9 @@
                         <div class="flex items-center space-x-3">
                             <span class="text-xs font-medium text-slate-500 w-12">Color</span>
                             <div class="h-3 flex-1 rounded-full bg-gradient-to-r from-blue-100 to-blue-800 shadow-inner border border-slate-100 dark:border-slate-600" id="layer-output-ramp-preview"></div>
-                             <span class="w-8"></span>
+                            <span class="w-8"></span>
                         </div>
-                        
+
                         <div class="pt-2 border-t border-slate-200 dark:border-slate-700 mt-4 flex justify-end">
                             <button id="btn-download" onclick="downloadShapefile()" disabled class="w-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 font-medium py-1.5 px-3 text-xs rounded flex items-center justify-center space-x-2 transition-all cursor-not-allowed">
                                 <i class="fas fa-download"></i>
@@ -291,7 +276,6 @@
         </div>
     </div>
 
-    <!-- Theme Reveal Overlay -->
     <div id="theme-reveal-overlay" class="fixed pointer-events-none z-[9999] rounded-full" style="width: 10px; height: 10px; top: 0; left: 0; transform: translate(-50%, -50%) scale(0);"></div>
 
     <script src="/static/script.js"></script>
